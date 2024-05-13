@@ -1,14 +1,20 @@
+# pip uninstall pyOpenSSL
+# pip install pyOpenSSL
+
 from pathlib import Path
 import scrapy
 import re
 import time
 import os
+from markdownify import markdownify as md
+
 
 class QuotesSpider(scrapy.Spider):
     name = "jd_docs"
+    root_dir = "/root/jd_docs/"
 
     def start_requests(self):
-        urls = [        
+        urls = [
             "https://docs.jdcloud.com/cn/virtual-machines/learning",
             "https://docs.jdcloud.com/cn/iavm/learning",
             "https://docs.jdcloud.com/cn/availability-group/product-overview",
@@ -129,7 +135,7 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/jd-cloud-dns/learning",
             "https://docs.jdcloud.com/cn/private-zone/announce",
             "https://docs.jdcloud.com/cn/ai-community/",
-            "https://docs.jdcloud.com/cn/yanxi-cap/product-overview",    
+            "https://docs.jdcloud.com/cn/yanxi-cap/product-overview",
             "https://docs.jdcloud.com/cn/modelservice/product-overview",
             "https://docs.jdcloud.com/cn/monitoring/learning",
             "https://docs.jdcloud.com/cn/log-service/product-overview",
@@ -139,7 +145,7 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/sgm-mobile/Product-Overview",
             "https://docs.jdcloud.com/cn/codecommit/product-overview",
             "https://docs.jdcloud.com/cn/perftest/product-overview",
-            "https://docs.jdcloud.com/cn/artifacts/product-overview", 
+            "https://docs.jdcloud.com/cn/artifacts/product-overview",
             "https://docs.jdcloud.com/cn/bizdevops/product-overview",
             "https://docs.jdcloud.com/cn/joybuilder/product-overview",
             "https://docs.jdcloud.com/cn/sbom/product-overview",
@@ -149,7 +155,7 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/devops/product-overview",
             "https://docs.jdcloud.com/cn/audit-trail/product-overview",
             "https://docs.jdcloud.com/cn/tag-service/product-overview",
-            "https://docs.jdcloud.com/cn/ias/overview",                                
+            "https://docs.jdcloud.com/cn/ias/overview",
             "https://docs.jdcloud.com/cn/devagile/product-overview",
             "https://docs.jdcloud.com/cn/organization-management/Introduction/Product-Overview",
             "https://docs.jdcloud.com/cn/peie/product-overview",
@@ -159,7 +165,7 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/umap/product-overview",
             "https://docs.jdcloud.com/cn/h5-scan/product-overview",
             "https://docs.jdcloud.com/cn/advisor/product-overview",
-            "https://docs.jdcloud.com/cn/amc/product-overview",    
+            "https://docs.jdcloud.com/cn/amc/product-overview",
             "https://docs.jdcloud.com/cn/domain-name-service/learning",
             "https://docs.jdcloud.com/cn/jdcloud-site/learning",
             "https://docs.jdcloud.com/cn/icp-license-service/introduction",
@@ -169,7 +175,7 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/live-video/product-overview",
             "https://docs.jdcloud.com/cn/media-processing-service/product-overview",
             "https://docs.jdcloud.com/cn/video-on-demand/product-overview",
-            "https://docs.jdcloud.com/cn/video-quality-detection/product-overview", 
+            "https://docs.jdcloud.com/cn/video-quality-detection/product-overview",
             "https://docs.jdcloud.com/cn/mobile-live-video-sdk/product-overview",
             "https://docs.jdcloud.com/cn/short-video-service-sdk/product-overview",
             "https://docs.jdcloud.com/cn/player-service-sdk/product-overview",
@@ -179,7 +185,7 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/vr-live/product-overview",
             "https://docs.jdcloud.com/cn/vr-video-on-demand/product-overview",
             "https://docs.jdcloud.com/cn/vr-player-service-sdk/product-overview",
-            "https://docs.jdcloud.com/cn/huizhanyunsaas/product-overview", 
+            "https://docs.jdcloud.com/cn/huizhanyunsaas/product-overview",
             "https://docs.jdcloud.com/cn/jdcloudmail/product-overview",
             "https://docs.jdcloud.com/cn/jd-blockchain-open-platform/product-overview",
             "https://docs.jdcloud.com/cn/finance-taxation/product-overview",
@@ -189,7 +195,7 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/stream-hub/product-overview",
             "https://docs.jdcloud.com/cn/stream-compute/product-overview",
             "https://docs.jdcloud.com/cn/bi-report/product-overview",
-            "https://docs.jdcloud.com/cn/jd-mapreduce/version-overview",    
+            "https://docs.jdcloud.com/cn/jd-mapreduce/version-overview",
             "https://docs.jdcloud.com/cn/data-visualization/product-overview",
             "https://docs.jdcloud.com/cn/iot-data-analysis-service/product-overview",
             "https://docs.jdcloud.com/cn/iot-aep/product-overview",
@@ -199,7 +205,7 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/iot-link-service/product-overview",
             "https://docs.jdcloud.com/cn/rt-thread-for-jd/product-overview",
             "https://docs.jdcloud.com/cn/iot-devfss/product-overview",
-            "https://docs.jdcloud.com/cn/iot-device-identity/product-overview", 
+            "https://docs.jdcloud.com/cn/iot-device-identity/product-overview",
             "https://docs.jdcloud.com/cn/aiot-cv/product-overview",
             "https://docs.jdcloud.com/cn/iot-carbon-emission/product-overview",
             "https://docs.jdcloud.com/cn/iot-park/product-overview",
@@ -209,10 +215,10 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/iot-bulkstock/product-overview",
             "https://docs.jdcloud.com/cn/moiot/productoverview",
             "https://docs.jdcloud.com/cn/iov-mobility-service/product-overview",
-            "https://docs.jdcloud.com/cn/jdwhale-dcs/product-overview", 
+            "https://docs.jdcloud.com/cn/jdwhale-dcs/product-overview",
             "https://docs.jdcloud.com/cn/EcoBuildOps/product-overview",
             "https://docs.jdcloud.com/cn/coc-virtual-machines/product-overview",
-            "https://docs.jdcloud.com/cn/coc-disk/product-overview", 
+            "https://docs.jdcloud.com/cn/coc-disk/product-overview",
             "https://docs.jdcloud.com/cn/coc-virtual-private-cloud/product-overview",
             "https://docs.jdcloud.com/cn/coc-elastic-ip/product-overview",
             "https://docs.jdcloud.com/cn/virtual-machines-x/product-overview",
@@ -225,7 +231,7 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/learn-best-practice/construction-of-jdcloud-high-availability-architecture",
             "https://docs.jdcloud.com/cn/account-assets/fund-flow",
             "https://docs.jdcloud.com/cn/online-buying/transaction-details",
-            "https://docs.jdcloud.com/cn/payment/payment-methods", 
+            "https://docs.jdcloud.com/cn/payment/payment-methods",
             "https://docs.jdcloud.com/cn/invoice/invoice-application-process",
             "https://docs.jdcloud.com/cn/billing/prepay",
             "https://docs.jdcloud.com/cn/contract-management/contract-application-process",
@@ -238,42 +244,68 @@ class QuotesSpider(scrapy.Spider):
             "https://docs.jdcloud.com/cn/security-operation-protection/product-overview",
             "https://docs.jdcloud.com/cn/jdcloudapp/introduction",
             "https://docs.jdcloud.com/cn/marketplace/marketplace-introduction",
-            "https://docs.jdcloud.com/cn/platform-agreement/registration-agreement", 
+            "https://docs.jdcloud.com/cn/platform-agreement/registration-agreement",
             "https://docs.jdcloud.com/cn/copyright/copyright",
             "https://docs.jdcloud.com/cn/service-content/service-content",
             "https://docs.jdcloud.com/cn/contact-us/contact-us"
-        ]    
+        ]
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse)
 
-    def parse(self, response): 
-        dir_path="pages/"+response.url.split("/")[-2]
-        isExists=os.path.exists(dir_path)
+    def parse(self, response):
+        dir_path = self.root_dir+response.url.split("/")[-2]
+        isExists = os.path.exists(dir_path)
         if isExists:
             os.rmdir(dir_path)
-        os.makedirs(dir_path) 
+        os.makedirs(dir_path)
         time.sleep(1)
-        url_list=response.selector.xpath('//ul[contains(@class,"nav-inner-list")]/li/a/@href').getall()
+        url_list = response.selector.xpath(
+            '//ul[contains(@class,"nav-inner-list")]/li/a/@href').getall()
         for url in url_list:
-            if url=="javascript:;":
+            if url == "javascript:;":
                 continue
-            url="https://docs.jdcloud.com"+url            
-            yield scrapy.Request(url=url, callback=self.get_markdown,meta={'dir_path': dir_path})          
-            
-    def get_markdown(self,response):  
-        dir=response.meta["dir_path"]
-        name = response.url.split("/")[-1]  
-        filename = f"{dir}/{name}.md"      
-        js=response.selector.xpath("//body/script/text()").get()
-        #解析script 中的函数      
-        fun = re.search(r"window\.__NUXT__=\(function\((.*?)\)\s*{([\s\S]*?)}\((.*?)\)\);", js,re.M).group(2)  
-        # 提取aP.content 的 markdown内容            
-        markdown=re.search(r".content\s*=\s*\"(.*)\";",fun,re.M).group(1).replace("\\n","\n")
-        Path(filename).write_bytes(bytes(markdown, encoding = "utf8"))
-        self.log(f"Saved file {filename}")
-        # print(markdown)
-    
- 
+            url = "https://docs.jdcloud.com"+url
+            yield scrapy.Request(url=url, callback=self.get_markdown, meta={'dir_path': dir_path})
 
-   
-        
+    def get_markdown(self, response):
+        dir = response.meta["dir_path"]
+        name = response.url.split("/")[-1]
+        filename = f"{dir}/{name}.md"
+        js = response.selector.xpath("//body/script/text()").get()
+        # 解析script 中的函数
+        fun = re.search(
+            r"window\.__NUXT__=\(function\((.*?)\)\s*{([\s\S]*?)}\((.*?)\)\);", js, re.M).group(2)
+        # 提取aP.content 的 markdown内容
+        content = re.search(r".content\s*=\s*\"(.*)\";",
+                            fun, re.M).group(1).replace("\\n", "\n")
+
+        # 替换unicode字符为标签
+        result = re.sub(r"\\[uU]([0-9a-fA-F]{4})", replace_unicode, content)
+
+        # 如果为html 格式，转换为markdown
+        if is_html(result):
+            result = md(result)
+
+        # 去html标签
+        pattern = re.compile(r'<[^>]+>', re.S)
+        result = pattern.sub(' ', result)
+
+        Path(filename).write_bytes(bytes(result, encoding="utf8"))
+        self.log(f"Saved file {filename}")
+
+
+def is_html(content):
+    if content.startswith('<'):
+        return True
+    else:
+        return False
+
+
+def replace_unicode(match):
+    """
+    usecase:
+    替换Unicode字符为str
+    result = re.sub(r"\\[uU]([0-9a-fA-F]{4})", replace_unicode, lines)
+    """
+    code_point = int(match.group(1), 16)
+    return chr(code_point)
