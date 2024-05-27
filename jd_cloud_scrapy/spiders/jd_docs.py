@@ -6,12 +6,20 @@ import scrapy
 import re
 import time
 import os
+from pydantic import BaseModel
 from markdownify import markdownify as md
+
+
+class json_doc(BaseModel):
+    content: str
+    title: str
+    product: str
+    url: str
 
 
 class QuotesSpider(scrapy.Spider):
     name = "jd_docs"
-    root_dir = "/root/jd_docs/"
+    root_dir = "/root/jd_docs_00/"
 
     def start_requests(self):
         urls = [
@@ -265,12 +273,13 @@ class QuotesSpider(scrapy.Spider):
             if url == "javascript:;":
                 continue
             url = "https://docs.jdcloud.com"+url
-            yield scrapy.Request(url=url, callback=self.get_markdown, meta={'dir_path': dir_path})
+            yield scrapy.Request(url=url, callback=self.get_json, meta={'dir_path': dir_path})
 
     def get_markdown(self, response):
         dir = response.meta["dir_path"]
         name = response.url.split("/")[-1]
         filename = f"{dir}/{name}.md"
+
         js = response.selector.xpath("//body/script/text()").get()
         # 解析script 中的函数
         fun = re.search(
@@ -291,6 +300,44 @@ class QuotesSpider(scrapy.Spider):
         result = pattern.sub(' ', result)
 
         Path(filename).write_bytes(bytes(result, encoding="utf8"))
+        self.log(f"Saved file {filename}")
+
+    def get_json(self, response):
+        dir = response.meta["dir_path"]
+        url = response.url
+        name = response.url.split("/")[-1]
+        filename = f"{dir}/{name}.json"
+
+        title = response.selector.xpath("//title/text()").get()
+        title_list = title.split("--")
+        # 文档title
+        doc_title = title_list[0]
+        # 产品名称
+        prd = title_list[1].split('-')[0]
+
+        js = response.selector.xpath("//body/script/text()").get()
+        # 解析script 中的函数
+        fun = re.search(
+            r"window\.__NUXT__=\(function\((.*?)\)\s*{([\s\S]*?)}\((.*?)\)\);", js, re.M).group(2)
+        # 提取aP.content 的 markdown内容
+        content = re.search(r".content\s*=\s*\"(.*)\";",
+                            fun, re.M).group(1).replace("\\n", "\n")
+
+        # 替换unicode字符为标签
+        result = re.sub(r"\\[uU]([0-9a-fA-F]{4})", replace_unicode, content)
+
+        # 如果为html 格式，转换为markdown
+        if is_html(result):
+            result = md(result)
+
+        # 去html标签
+        pattern = re.compile(r'<[^>]+>', re.S)
+        result = pattern.sub(' ', result)
+
+        doc = json_doc(content=result, title=doc_title, product=prd, url=url)
+
+        Path(filename).write_bytes(
+            bytes(doc.model_dump_json(), encoding="utf8"))
         self.log(f"Saved file {filename}")
 
 
