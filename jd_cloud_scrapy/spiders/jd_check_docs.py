@@ -6,6 +6,7 @@ import scrapy
 import re
 import time
 import os
+from enum import Enum
 from pydantic import BaseModel
 from markdownify import markdownify as md
 
@@ -17,8 +18,21 @@ class json_doc(BaseModel):
     url: str
 
 
+class Reason(Enum):
+    StartWithUnicode = 'start_with_unicode'
+    IsHtml = 'is_html'
+
+
+class bad_doc_json(BaseModel):
+    url: str
+    incorrect_reason: Reason
+
+    def __str__(self):
+        return str(self.value)
+
+
 class QuotesSpider(scrapy.Spider):
-    name = "jd_docs"
+    name = "jd_check_docs"
     root_dir = "/root/jd_docs/"
 
     def start_requests(self):
@@ -259,57 +273,41 @@ class QuotesSpider(scrapy.Spider):
         ]
 
         # urls=["https://docs.jdcloud.com/cn/jcs-for-kubernetes/product-overview"]
+
+        filename = f"{self.root_dir}incorrect_docs1.csv"
+        if os.path.exists(filename):
+            os.remove(filename)
         for url in urls:
-            yield scrapy.Request(url=url, callback=self.parse)
+            yield scrapy.Request(url=url, callback=self.parse, meta={'filename': filename})
 
     def parse(self, response):
-        dir_path = self.root_dir+response.url.split("/")[-2]
-        isExists = os.path.exists(dir_path)
-        if isExists:
-            os.rmdir(dir_path)
-        os.makedirs(dir_path)
+        # dir_path = self.root_dir+response.url.split("/")[-2]
+        # isExists = os.path.exists(dir_path)
+        # if isExists:
+        #     os.rmdir(dir_path)
+        # os.makedirs(dir_path)
+        filename = response.meta["filename"]
         time.sleep(1)
         url_list = response.selector.xpath(
             '//ul[contains(@class,"nav-inner-list")]/li/a/@href').getall()
         for url in url_list:
+            print(url)
             if url == "javascript:;":
                 continue
             url = "https://docs.jdcloud.com"+url
-            yield scrapy.Request(url=url, callback=self.get_json, meta={'dir_path': dir_path})
+            # yield scrapy.Request(url=url, callback=self.check_docs, meta={'dir_path': dir_path})
+            yield scrapy.Request(url=url, callback=self.check_docs, meta={'filename': filename})
 
-    def get_markdown(self, response):
-        dir = response.meta["dir_path"]
-        name = response.url.split("/")[-1]
-        filename = f"{dir}/{name}.md"
-
-        js = response.selector.xpath("//body/script/text()").get()
-        # 解析script 中的函数
-        fun = re.search(
-            r"window\.__NUXT__=\(function\((.*?)\)\s*{([\s\S]*?)}\((.*?)\)\);", js, re.M).group(2)
-
-        # 提取aP.content 的 markdown内容
-        content = re.search(r".content\s*=\s*\"(.*)\";",
-                            fun, re.M).group(1).replace("\\n", "\n")
-
-        # 替换unicode字符为标签
-        result = re.sub(r"\\[uU]([0-9a-fA-F]{4})", replace_unicode, content)
-
-        # 如果为html 格式，转换为markdown
-        if is_html(result):
-            result = md(result)
-
-        # 去html标签
-        pattern = re.compile(r'<[^>]+>', re.S)
-        result = pattern.sub(' ', result)
-
-        Path(filename).write_bytes(bytes(result, encoding="utf8"))
-        self.log(f"Saved file {filename}")
-
-    def get_json(self, response):
-        dir = response.meta["dir_path"]
+    def check_docs(self, response):
+        # dir = response.meta["dir_path"]
+        # name = response.url.split("/")[-1]
         url = response.url
-        name = response.url.split("/")[-1]
-        filename = f"{dir}/{name}.json"
+
+        # filename = f"{dir}/{name}.json"
+        # filename = f"{self.root_dir}/incorrect_docs.json"
+        filename = response.meta["filename"]
+
+        incorrect_docs_record_file = open(filename, "a+")
 
         title = response.selector.xpath("//title/text()").get()
         title_list = title.split("--")
@@ -326,25 +324,15 @@ class QuotesSpider(scrapy.Spider):
         content = re.search(r".content\s*=\s*\"(.*)\";",
                             fun, re.M).group(1).replace("\\n", "\n")
 
-        # 替换unicode字符为标签
-        result = re.sub(r"\\[uU]([0-9a-fA-F]{4})", replace_unicode, content)
+        checked = check_content(content=content, url=url)
 
-        # 如果为html 格式，转换为markdown
-        if is_html(result):
-            try:
-                result = md(result)
-            except BaseException:
-                self.log(f"result: {result}")
-
-        # 去html标签
-        pattern = re.compile(r'<[^>]+>', re.S)
-        result = pattern.sub(' ', result)
-
-        doc = json_doc(content=result, title=doc_title, product=prd, url=url)
-
-        Path(filename).write_bytes(
-            bytes(doc.model_dump_json(), encoding="utf8"))
-        self.log(f"Saved file {filename}")
+        if checked != None:
+            line = str(checked.incorrect_reason)+"," + \
+                str(prd)+","+checked.url
+            incorrect_docs_record_file.write(line+"\n")
+            # incorrect_docs_record_file.write(checked.model_dump_json()+"\n")
+            incorrect_docs_record_file.close()
+            self.log(f"append {filename}:{checked.model_dump_json()}")
 
 
 def is_html(content):
@@ -362,3 +350,31 @@ def replace_unicode(match):
     """
     code_point = int(match.group(1), 16)
     return chr(code_point)
+
+
+def include_unicode(text):
+    match = r"\\[uU]([0-9a-fA-F]{4})"
+    if re.search(r"\\[uU]([0-9a-fA-F]{4})", text):
+        return True
+    else:
+        return False
+
+
+def start_with_unicode(text):
+    match = r"^\\[uU]([0-9a-fA-F]{4})"
+    if re.search(match, text):
+        return True
+    else:
+        return False
+
+
+def check_content(content, url):
+    if start_with_unicode(content):
+        return bad_doc_json(url=url, incorrect_reason=Reason.StartWithUnicode)
+
+    result = re.sub(r"\\[uU]([0-9a-fA-F]{4})", replace_unicode, content)
+
+    if is_html(result):
+        return bad_doc_json(url=url, incorrect_reason=Reason.IsHtml)
+
+    return None
