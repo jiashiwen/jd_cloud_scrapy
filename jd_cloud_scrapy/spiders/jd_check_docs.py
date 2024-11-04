@@ -10,6 +10,7 @@ from enum import Enum
 from pydantic import BaseModel
 from markdownify import markdownify as md
 
+incorrect_filename="/tmp/incorrect_docs.csv"
 
 class json_doc(BaseModel):
     content: str
@@ -33,7 +34,7 @@ class bad_doc_json(BaseModel):
 
 class QuotesSpider(scrapy.Spider):
     name = "jd_check_docs"
-    root_dir = "/root/jd_docs/"
+    root_dir = "/tmp/"   
 
     def start_requests(self):
         urls = [
@@ -274,7 +275,8 @@ class QuotesSpider(scrapy.Spider):
 
         # urls=["https://docs.jdcloud.com/cn/jcs-for-kubernetes/product-overview"]
 
-        filename = f"{self.root_dir}incorrect_docs1.csv"
+        # filename = f"{self.root_dir}incorrect_docs.csv"
+        filename = incorrect_filename
         if os.path.exists(filename):
             os.remove(filename)
         for url in urls:
